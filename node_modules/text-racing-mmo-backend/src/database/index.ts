@@ -13,3 +13,8 @@ export {
 } from './migrations';
 
 export { initializeDatabase } from './init';
+
+export {
+  RedisManager,
+  redisManager
+} from './redis';
