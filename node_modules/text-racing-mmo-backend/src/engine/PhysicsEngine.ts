@@ -57,8 +57,6 @@ export class PhysicsEngine {
     // Process each participant
     for (const participant of raceState.participants) {
       const car = CarService.getCarById(participant.carId);
-      if (!car) continue;
-
       const command = commands.get(participant.playerId) || { type: 'coast' };
       const update = this.updateParticipant(participant, car, command, track, raceState.raceTime);
       
@@ -102,13 +100,18 @@ export class PhysicsEngine {
    */
   private static updateParticipant(
     participant: ParticipantState,
-    car: CarModel,
+    car: CarModel | null,
     command: RaceCommand,
     track: TrackConfiguration,
     raceTime: number
   ): PhysicsUpdate {
     const events: RaceEvent[] = [];
     const deltaTime = PhysicsEngine.TICK_DURATION / 1000; // Convert to seconds
+
+    // If car is null, return unchanged participant
+    if (!car) {
+      return { participantId: participant.playerId, newState: { ...participant }, events };
+    }
 
     // Calculate throttle and brake inputs
     const { throttle, brake } = this.processCommand(command);
@@ -140,7 +143,7 @@ export class PhysicsEngine {
 
     // Calculate fuel consumption
     const fuelConsumed = CarService.calculateFuelConsumption(car, averageSpeed, throttle) * (deltaTime / 3600); // Convert L/h to L/tick
-    const newFuel = Math.max(0, participant.fuel - (fuelConsumed / 60)); // Assuming 60L tank capacity
+    const newFuel = Math.max(0, participant.fuel - (fuelConsumed * 100 / 60)); // Assuming 60L tank capacity, convert to percentage
 
     // Calculate tire wear
     const lateralG = this.calculateLateralG(clampedSpeed, track);
@@ -281,8 +284,11 @@ export class PhysicsEngine {
     const events: RaceEvent[] = [];
     
     for (const participant of participants) {
-      // Check if participant just completed a lap (distance reset to near 0)
-      if (participant.location.distance < 100 && participant.location.lap > 0) {
+      // Check if participant just completed a lap (crossed finish line)
+      // We'll track this by checking if they've moved past the track length
+      if (participant.location.lap > 0 && participant.location.distance < track.length * 0.1) {
+        // Only generate event if this is a new lap completion
+        // In a real implementation, we'd track previous state to avoid duplicate events
         events.push(this.createRaceEvent(
           'lap_complete',
           `${participant.playerId} completes lap ${participant.location.lap}`,

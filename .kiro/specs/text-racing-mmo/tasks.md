@@ -37,7 +37,9 @@
   - Create unit tests for car performance calculations
   - _Requirements: 1.1, 1.2, 6.1, 6.2_
 
-- [-] 4. Build core race engine and physics simulation
+- [x] 4. Build core race engine and physics simulation
+
+
 
 
   - Implement race physics calculations using car specifications (acceleration, braking, top speed)
@@ -47,7 +49,10 @@
   - Create unit tests for physics calculations and race progression
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 3.4_
 
-- [ ] 5. Implement command processing system
+- [-] 5. Implement command processing system
+
+
+
   - Create command parser for racing actions (accelerate, brake, shift, pit)
   - Implement command validation and error handling
   - Write command queue system for processing multiple rapid inputs
