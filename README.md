@@ -1,5 +1,3 @@
-# Text Racing MMO
-
 A browser-based, text-driven MMO racing game where players select real car models and compete in persistent leagues through strategic text commands.
 
 ## Project Structure
