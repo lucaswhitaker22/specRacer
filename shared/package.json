@@ -1,0 +1,23 @@
+{
+  "name": "text-racing-mmo-shared",
+  "version": "1.0.0",
+  "description": "Shared TypeScript types and interfaces for Text Racing MMO",
+  "main": "types/index.ts",
+  "type": "module",
+  "exports": {
+    ".": "./types/index.ts",
+    "./commands": "./types/commands.ts",
+    "./player": "./types/player.ts",
+    "./websocket": "./types/websocket.ts"
+  },
+  "scripts": {
+    "build": "tsc",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.1.6"
+  },
+  "keywords": ["types", "typescript", "shared"],
+  "author": "",
+  "license": "MIT"
+}
