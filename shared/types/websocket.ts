@@ -1,8 +1,8 @@
 // WebSocket event interfaces for real-time communication
 
-import type { RaceState, RaceEvent } from './index.js';
-import type { Command, CommandResult } from './commands.js';
-import type { RaceResult } from './player.js';
+import type { RaceState, RaceEvent } from './index';
+import type { Command, CommandResult } from './commands';
+import type { RaceResult } from './player';
 
 export interface WebSocketEvents {
   // Client to Server events

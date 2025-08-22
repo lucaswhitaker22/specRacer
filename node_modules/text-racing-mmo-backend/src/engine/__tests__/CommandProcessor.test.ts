@@ -197,7 +197,7 @@ describe('CommandParser', () => {
         invalidGears.forEach(gear => {
           const result = CommandParser.parseCommand(`shift ${gear}`);
           expect(result.isValid).toBe(false);
-          if (gear === 'abc' || gear === '2.5') {
+          if (gear === 'abc' || gear === '2.5' || gear === '-1') {
             expect(result.error).toContain('Gear must be a number');
           } else {
             expect(result.error).toContain('Gear must be between 1 and 8');
@@ -274,16 +274,19 @@ describe('CommandQueue', () => {
     });
 
     test('should enforce queue size limit', () => {
+      // Create a queue with higher rate limit to test size limit specifically
+      const testQueue = new CommandQueue(3, 10); // Max 3 commands, 10 per second
+      
       // Fill queue to capacity
       for (let i = 0; i < 3; i++) {
-        queue.enqueue({ ...mockCommand, timestamp: Date.now() + i });
+        testQueue.enqueue({ ...mockCommand, timestamp: Date.now() + i });
       }
-      expect(queue.size()).toBe(3);
+      expect(testQueue.size()).toBe(3);
 
       // Adding one more should remove the oldest
-      const result = queue.enqueue({ ...mockCommand, timestamp: Date.now() + 10 });
+      const result = testQueue.enqueue({ ...mockCommand, timestamp: Date.now() + 10 });
       expect(result.success).toBe(true);
-      expect(queue.size()).toBe(3);
+      expect(testQueue.size()).toBe(3);
     });
 
     test('should enforce rate limit', () => {
@@ -333,17 +336,20 @@ describe('CommandQueue', () => {
     });
 
     test('should maintain FIFO order', () => {
+      // Create a queue with higher rate limit to test FIFO order specifically
+      const testQueue = new CommandQueue(5, 10); // Max 5 commands, 10 per second
+      
       const commands = [
         { ...mockCommand, timestamp: 1 },
         { ...mockCommand, timestamp: 2 },
         { ...mockCommand, timestamp: 3 }
       ];
 
-      commands.forEach(cmd => queue.enqueue(cmd));
+      commands.forEach(cmd => testQueue.enqueue(cmd));
 
-      const dequeued1 = queue.dequeue();
-      const dequeued2 = queue.dequeue();
-      const dequeued3 = queue.dequeue();
+      const dequeued1 = testQueue.dequeue();
+      const dequeued2 = testQueue.dequeue();
+      const dequeued3 = testQueue.dequeue();
 
       expect(dequeued1?.timestamp).toBe(1);
       expect(dequeued2?.timestamp).toBe(2);

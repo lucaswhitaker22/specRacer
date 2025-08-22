@@ -49,7 +49,9 @@
   - Create unit tests for physics calculations and race progression
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 3.4_
 
-- [-] 5. Implement command processing system
+- [x] 5. Implement command processing system
+
+
 
 
 
@@ -59,7 +61,11 @@
   - Create unit tests for all command types and validation scenarios
   - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
-- [ ] 6. Build WebSocket communication layer
+- [x] 6. Build WebSocket communication layer
+
+
+
+
   - Set up WebSocket server with event handling for race commands and updates
   - Implement real-time race state broadcasting to all participants
   - Create connection management with graceful disconnection handling

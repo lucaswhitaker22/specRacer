@@ -178,6 +178,12 @@ export class CommandParser {
     }
 
     const gearParam = params[0];
+    
+    // Check if it's a valid integer (no decimals)
+    if (!/^\d+$/.test(gearParam)) {
+      throw new Error('Gear must be a number');
+    }
+    
     const gear = parseInt(gearParam, 10);
 
     if (isNaN(gear)) {

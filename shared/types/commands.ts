@@ -1,5 +1,8 @@
 // Command interfaces for player actions
 
+// Import ParticipantState for use in CommandResult
+import type { ParticipantState } from './index';
+
 export interface Command {
   type: CommandType;
   parameters?: CommandParameters;
@@ -32,4 +35,4 @@ export interface CommandResult {
 }
 
 // Re-export ParticipantState for convenience
-export type { ParticipantState } from './index.js';
+export type { ParticipantState };
