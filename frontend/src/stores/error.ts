@@ -58,6 +58,10 @@ export const useErrorStore = defineStore('error', () => {
     return addError(message, code, 'info', persistent)
   }
 
+  function addSuccess(message: string, code: string, persistent = false): string {
+    return addError(message, code, 'info', persistent)
+  }
+
   function removeError(id: string) {
     const index = errors.value.findIndex(e => e.id === id)
     if (index !== -1) {
@@ -129,6 +133,7 @@ export const useErrorStore = defineStore('error', () => {
     addError,
     addWarning,
     addInfo,
+    addSuccess,
     removeError,
     clearErrors,
     clearErrorsByCode,

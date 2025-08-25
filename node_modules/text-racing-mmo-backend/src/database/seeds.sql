@@ -3,7 +3,7 @@
 -- Insert default track
 INSERT INTO tracks (id, name, length_meters, characteristics) VALUES 
 (
-  uuid_generate_v4(),
+  '550e8400-e29b-41d4-a716-446655440000',
   'Silverstone Circuit',
   5891,
   '{

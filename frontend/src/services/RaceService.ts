@@ -22,7 +22,7 @@ export interface RaceInfo {
 
 export class RaceService {
   private static instance: RaceService
-  private baseUrl = '/api/races'
+  private baseUrl = `${import.meta.env.VITE_API_BASE_URL || '/api'}/races`
 
   static getInstance(): RaceService {
     if (!RaceService.instance) {

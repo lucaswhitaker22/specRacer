@@ -44,44 +44,19 @@ text-racing-mmo/
 └── package.json            # Root workspace configuration
 ```
 
-## Quick Start
+## 🚀 Quick Start
 
-### Using Docker (Recommended)
+**Get racing in 2 minutes:**
 
-1. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   cd text-racing-mmo
-   ```
+```bash
+git clone <repository-url>
+cd text-racing-mmo
+npm run dev
+```
 
-2. Start the application:
-   ```bash
-   npm run deploy:dev
-   ```
+That's it! The game will be available at http://localhost:5173
 
-3. Open your browser to `http://localhost:3000`
-
-### Manual Setup
-
-1. Install dependencies:
-   ```bash
-   npm run install:all
-   ```
-
-2. Set up the database:
-   ```bash
-   npm run setup:db
-   ```
-
-3. Build the application:
-   ```bash
-   npm run build:all
-   ```
-
-4. Start the server:
-   ```bash
-   npm start
-   ```
+For detailed setup instructions, troubleshooting, and alternative installation methods, see [QUICKSTART.md](QUICKSTART.md).
 
 ## Game Flow
 

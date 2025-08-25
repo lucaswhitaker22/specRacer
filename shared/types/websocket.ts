@@ -7,14 +7,18 @@ import type { RaceResult } from './player';
 export interface WebSocketEvents {
   // Client to Server events
   'race:command': Command;
-  'race:join': { raceId: string };
+  'race:join': { raceId: string; carId: string };
   'race:leave': { raceId: string };
   'player:authenticate': { token: string };
   
   // Server to Client events
   'race:update': RaceState;
+  'race:state': RaceState;
   'race:event': RaceEvent;
-  'race:complete': RaceResult;
+  'race:started': { raceId: string };
+  'race:completed': { raceId: string; result: RaceResult };
+  'race:pitStop': { playerId: string; actions: any[]; duration: number };
+  'race:command': { playerId: string; command: string; timestamp: number };
   'command:result': CommandResult;
   'error': ErrorMessage;
   'connection:authenticated': { playerId: string };

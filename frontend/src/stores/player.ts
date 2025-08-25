@@ -12,6 +12,8 @@ export const usePlayerStore = defineStore('player', () => {
   const currentPlayer = ref<Player | null>(null)
   const authToken = ref<string | null>(null)
   const tokenExpiry = ref<Date | null>(null)
+  
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
   const isAuthenticated = computed(() => {
     return !!(currentPlayer.value && authToken.value && tokenExpiry.value && tokenExpiry.value > new Date())
@@ -19,7 +21,7 @@ export const usePlayerStore = defineStore('player', () => {
 
   const login = async (credentials: LoginCredentials): Promise<void> => {
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -50,7 +52,7 @@ export const usePlayerStore = defineStore('player', () => {
 
   const register = async (registerData: RegisterData): Promise<void> => {
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -93,7 +95,7 @@ export const usePlayerStore = defineStore('player', () => {
     }
 
     try {
-      const response = await fetch('/api/auth/verify', {
+      const response = await fetch(`${API_BASE_URL}/auth/verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

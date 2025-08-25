@@ -78,6 +78,17 @@ async function initializeServices() {
         healthMonitor.on('alert', (alert) => {
             logger.logError(new Error(`Health alert: ${alert.message}`), { alertId: alert.id, component: alert.component, severity: alert.severity });
         });
+        setInterval(() => {
+            const memoryUsage = process.memoryUsage();
+            const memoryPercentage = (memoryUsage.heapUsed / memoryUsage.heapTotal) * 100;
+            if (memoryPercentage > 85) {
+                logger.forceCleanup();
+                healthMonitor.forceCleanup();
+                if (global.gc) {
+                    global.gc();
+                }
+            }
+        }, 5 * 60 * 1000);
         logger.logInfo('All services initialized successfully', 'SERVICES_INITIALIZED');
         console.log('All services initialized successfully');
     }

@@ -19,8 +19,10 @@ export class RaceStateManager {
   private tickInterval: NodeJS.Timeout | null = null;
   private commandQueue: Map<string, RaceCommand> = new Map();
   private track: TrackConfiguration;
+  private config: RaceConfiguration;
   
   constructor(config: RaceConfiguration, track?: TrackConfiguration) {
+    this.config = config;
     this.track = track || PhysicsEngine.getDefaultTrack();
     this.raceState = this.initializeRaceState(config);
   }
@@ -50,7 +52,7 @@ export class RaceStateManager {
       return false; // Cannot add participants to active race
     }
 
-    if (this.raceState.participants.length >= 20) { // Max participants
+    if (this.raceState.participants.length >= this.config.maxParticipants) {
       return false;
     }
 

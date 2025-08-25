@@ -11,8 +11,8 @@ class HealthMonitorService extends events_1.EventEmitter {
         this.monitoringInterval = null;
         this.healthHistory = [];
         this.activeAlerts = new Map();
-        this.maxHistorySize = 1000;
-        this.checkInterval = 30000;
+        this.maxHistorySize = 100;
+        this.checkInterval = 60000;
         this.startTime = Date.now();
         this.logger = ErrorLogger_1.ErrorLogger.getInstance();
     }
@@ -73,6 +73,23 @@ class HealthMonitorService extends events_1.EventEmitter {
         }
         return false;
     }
+    forceCleanup() {
+        const now = Date.now();
+        const oneHourAgo = now - (60 * 60 * 1000);
+        for (const [alertId, alert] of this.activeAlerts.entries()) {
+            if (alert.resolved && alert.timestamp < oneHourAgo) {
+                this.activeAlerts.delete(alertId);
+            }
+        }
+        const memoryUsage = process.memoryUsage();
+        const memoryPercentage = (memoryUsage.heapUsed / memoryUsage.heapTotal) * 100;
+        if (memoryPercentage > 80) {
+            this.healthHistory = this.healthHistory.slice(-50);
+            if (global.gc) {
+                global.gc();
+            }
+        }
+    }
     async performHealthCheck() {
         try {
             const health = await this.checkSystemHealth();
@@ -81,6 +98,9 @@ class HealthMonitorService extends events_1.EventEmitter {
                 this.healthHistory.shift();
             }
             this.checkForAlerts(health);
+            if (health.metrics.memoryUsage.percentage > 80) {
+                this.forceCleanup();
+            }
             this.emit('healthUpdate', health);
             if (health.overall !== 'healthy') {
                 this.logger.logWarning(`System health is ${health.overall}`, 'SYSTEM_HEALTH_DEGRADED', { health });

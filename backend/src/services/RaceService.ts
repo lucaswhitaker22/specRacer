@@ -75,6 +75,7 @@ export class RaceService extends EventEmitter {
   private pitStopStates = new Map<string, Map<string, PitStopState>>(); // raceId -> playerId -> pitStopState
   private raceResults = new Map<string, RaceResult>();
   private trackConfigurations = new Map<string, TrackConfiguration>();
+  private raceTickIntervals = new Map<string, NodeJS.Timeout>();
 
   constructor() {
     super();
@@ -93,12 +94,28 @@ export class RaceService extends EventEmitter {
    * Create a new race
    */
   async createRace(options: CreateRaceOptions): Promise<string> {
-    const raceId = this.generateRaceId();
+    // If no trackId provided or it's the old string format, use default track
+    let trackId = options.trackId;
+    if (!trackId || trackId === 'silverstone-gp' || trackId === 'default') {
+      trackId = '550e8400-e29b-41d4-a716-446655440000'; // Default track UUID
+    }
+    
+    // Validate track exists in database
+    await this.validateTrackExists(trackId);
+    
+    // Update options with correct trackId
+    const correctedOptions = { ...options, trackId };
+    
+    // Let the database generate the UUID
+    const raceId = await this.createRaceInDatabase(correctedOptions);
     
     // Get track configuration
-    const track = this.trackConfigurations.get(options.trackId);
+    let track = this.trackConfigurations.get(trackId);
     if (!track) {
-      throw new Error(`Track not found: ${options.trackId}`);
+      // Use default track configuration if not found
+      track = PhysicsEngine.getDefaultTrack();
+      track.id = trackId; // Update the ID to match database
+      this.trackConfigurations.set(trackId, track);
     }
 
     // Create race configuration
@@ -123,7 +140,7 @@ export class RaceService extends EventEmitter {
     this.commandProcessors.set(raceId, commandProcessor);
     this.pitStopStates.set(raceId, new Map());
 
-    // Persist race to database
+    // Update race configuration in database
     await this.persistRaceCreation(raceConfig);
 
     this.emit('raceCreated', { raceId, config: raceConfig });
@@ -203,6 +220,9 @@ export class RaceService extends EventEmitter {
     if (success) {
       // Update database
       await this.updateRaceStatus(raceId, 'active', new Date());
+      
+      // Start race tick broadcasting
+      this.startRaceTickBroadcasting(raceId);
       
       this.emit('raceStarted', { raceId });
     }
@@ -416,9 +436,45 @@ export class RaceService extends EventEmitter {
   }
 
   /**
+   * Start race tick broadcasting for real-time updates
+   */
+  private startRaceTickBroadcasting(raceId: string): void {
+    const raceManager = this.activeRaces.get(raceId);
+    if (!raceManager) return;
+
+    // Broadcast race state every 100ms (10 FPS)
+    const tickInterval = setInterval(() => {
+      if (!raceManager.isRaceActive()) {
+        this.stopRaceTickBroadcasting(raceId);
+        this.cleanupRace(raceId);
+        return;
+      }
+
+      const raceState = raceManager.getRaceState();
+      this.emit('raceStateUpdate', { raceId, raceState });
+    }, 100);
+
+    this.raceTickIntervals.set(raceId, tickInterval);
+  }
+
+  /**
+   * Stop race tick broadcasting
+   */
+  private stopRaceTickBroadcasting(raceId: string): void {
+    const tickInterval = this.raceTickIntervals.get(raceId);
+    if (tickInterval) {
+      clearInterval(tickInterval);
+      this.raceTickIntervals.delete(raceId);
+    }
+  }
+
+  /**
    * Clean up race when it completes
    */
   private async cleanupRace(raceId: string): Promise<void> {
+    // Stop tick broadcasting
+    this.stopRaceTickBroadcasting(raceId);
+
     // Calculate and store results
     await this.calculateRaceResults(raceId);
 
@@ -435,12 +491,23 @@ export class RaceService extends EventEmitter {
   }
 
   // Helper methods for database operations
+  private async createRaceInDatabase(options: CreateRaceOptions): Promise<string> {
+    const db = getDatabaseConnection();
+    const result = await db.query(
+      `INSERT INTO races (track_id, total_laps, status) 
+       VALUES ($1, $2, $3) RETURNING id`,
+      [options.trackId, options.totalLaps, 'waiting']
+    );
+    return result.rows[0].id;
+  }
+
   private async persistRaceCreation(config: RaceConfiguration): Promise<void> {
+    // This method is no longer needed since we create the race in createRaceInDatabase
+    // But keeping it for backward compatibility if needed elsewhere
     const db = getDatabaseConnection();
     await db.query(
-      `INSERT INTO races (id, track_id, total_laps, race_data, status) 
-       VALUES ($1, $2, $3, $4, $5)`,
-      [config.raceId, config.trackId, config.totalLaps, JSON.stringify(config), 'waiting']
+      `UPDATE races SET race_data = $2 WHERE id = $1`,
+      [config.raceId, JSON.stringify(config)]
     );
   }
 
@@ -523,8 +590,17 @@ export class RaceService extends EventEmitter {
   }
 
   // Helper methods
-  private generateRaceId(): string {
-    return `race_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  private async validateTrackExists(trackId: string): Promise<void> {
+    const db = getDatabaseConnection();
+    const result = await db.query(
+      'SELECT id FROM tracks WHERE id = $1 AND is_active = true',
+      [trackId]
+    );
+    
+    if (result.rows.length === 0) {
+      throw new Error(`Track not found or not available: ${trackId}`);
+    }
   }
 
   private async validateCarSelection(carId: string): Promise<void> {
@@ -581,6 +657,26 @@ export class RaceService extends EventEmitter {
     // Points system: 1st = 25, 2nd = 18, 3rd = 15, etc.
     const pointsTable = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
     return position <= pointsTable.length ? pointsTable[position - 1] : 0;
+  }
+
+  /**
+   * Stop a race manually
+   */
+  async stopRace(raceId: string): Promise<boolean> {
+    const raceManager = this.activeRaces.get(raceId);
+    if (!raceManager) {
+      throw new Error(`Race not found: ${raceId}`);
+    }
+
+    if (!raceManager.isRaceActive()) {
+      return false;
+    }
+
+    raceManager.stopRace();
+    this.stopRaceTickBroadcasting(raceId);
+    await this.cleanupRace(raceId);
+
+    return true;
   }
 
   /**

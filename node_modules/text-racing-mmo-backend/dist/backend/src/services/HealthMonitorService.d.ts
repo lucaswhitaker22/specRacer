@@ -56,6 +56,7 @@ export declare class HealthMonitorService extends EventEmitter {
     getActiveAlerts(): HealthAlert[];
     getSystemMetrics(): Promise<SystemMetrics>;
     resolveAlert(alertId: string): boolean;
+    forceCleanup(): void;
     private performHealthCheck;
     private checkSystemHealth;
     private checkDatabaseHealth;

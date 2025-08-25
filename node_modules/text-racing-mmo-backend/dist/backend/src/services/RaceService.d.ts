@@ -69,12 +69,13 @@ export declare class RaceService extends EventEmitter {
     private applyPitStopEffects;
     private calculateRaceResults;
     private cleanupRace;
+    private createRaceInDatabase;
     private persistRaceCreation;
     private persistRaceParticipant;
     private updateRaceStatus;
     private persistRaceResults;
     private updatePlayerStatistics;
-    private generateRaceId;
+    private validateTrackExists;
     private validateCarSelection;
     private getDefaultWeather;
     private getDefaultTrackConditions;

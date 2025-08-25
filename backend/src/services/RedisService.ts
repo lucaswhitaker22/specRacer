@@ -89,7 +89,7 @@ export class RedisService {
    * Start periodic cleanup of expired data
    */
   private startCleanupInterval(): void {
-    // Run cleanup every hour
+    // Run cleanup every 15 minutes instead of 1 hour
     setInterval(async () => {
       try {
         const cleanedSessions = await this.sessionService.cleanupExpiredSessions();
@@ -99,7 +99,7 @@ export class RedisService {
       } catch (error) {
         console.error('Error during periodic cleanup:', error);
       }
-    }, 60 * 60 * 1000); // 1 hour
+    }, 15 * 60 * 1000); // 15 minutes
   }
 
   /**

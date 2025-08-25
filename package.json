@@ -23,7 +23,9 @@
     "docker:stop": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
     "deploy:dev": "docker-compose up -d",
-    "deploy:prod": "docker-compose --profile production up -d"
+    "deploy:prod": "docker-compose --profile production up -d",
+    "dev": "node start-dev.js",
+    "prod": "node start-prod.js"
   },
   "keywords": ["racing", "mmo", "game", "websocket", "vue", "nodejs"],
   "author": "",

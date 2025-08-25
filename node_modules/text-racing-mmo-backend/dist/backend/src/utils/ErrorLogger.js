@@ -20,7 +20,7 @@ exports.AppError = AppError;
 class ErrorLogger {
     constructor() {
         this.logBuffer = [];
-        this.maxBufferSize = 1000;
+        this.maxBufferSize = 200;
         this.logDirectory = path_1.default.join(process.cwd(), 'logs');
         this.flushInterval = null;
         this.initializeLogDirectory();
@@ -135,6 +135,14 @@ class ErrorLogger {
         }
         catch (error) {
             console.error('Failed to cleanup old logs:', error);
+        }
+    }
+    forceCleanup() {
+        this.flushLogs().catch(error => {
+            console.error('Failed to flush logs during cleanup:', error);
+        });
+        if (this.logBuffer.length > 50) {
+            this.logBuffer = this.logBuffer.slice(-50);
         }
     }
     async shutdown() {

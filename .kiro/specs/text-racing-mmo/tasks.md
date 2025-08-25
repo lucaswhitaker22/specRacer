@@ -73,7 +73,12 @@
   - Write integration tests for WebSocket message flow
   - _Requirements: 7.1, 7.2, 7.4, 3.1, 3.3_
 
-- [ ] 7. Create race management service
+- [x] 7. Create race management service
+
+
+
+
+
 
 
 

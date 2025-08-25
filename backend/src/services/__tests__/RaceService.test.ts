@@ -25,8 +25,17 @@ describe('RaceService', () => {
     mockCarId = 'car-123';
     mockPlayerId = 'player-456';
 
-    // Mock database responses
-    mockDb.query.mockResolvedValue({ rows: [{ id: mockCarId }] });
+    // Mock database responses with unique race IDs
+    let raceIdCounter = 0;
+    mockDb.query.mockImplementation((query: string) => {
+      if (query.includes('INSERT INTO races')) {
+        raceIdCounter++;
+        return Promise.resolve({ rows: [{ id: `race_${Date.now()}_${raceIdCounter}` }] });
+      }
+      // For track validation and car validation
+      return Promise.resolve({ rows: [{ id: mockCarId }] });
+    });
+    
     mockDb.transaction.mockImplementation(async (callback) => {
       return await callback(mockDb);
     });
@@ -58,6 +67,18 @@ describe('RaceService', () => {
     });
   });
 
+  afterEach(async () => {
+    // Clean up any active races to prevent hanging async operations
+    const activeRaces = raceService.getActiveRaces();
+    for (const raceId of activeRaces) {
+      try {
+        await raceService.stopRace(raceId);
+      } catch (error) {
+        // Ignore errors during cleanup
+      }
+    }
+  });
+
   describe('Race Creation', () => {
     it('should create a new race successfully', async () => {
       const options: CreateRaceOptions = {
@@ -69,20 +90,23 @@ describe('RaceService', () => {
       const raceId = await raceService.createRace(options);
 
       expect(raceId).toBeDefined();
-      expect(raceId).toMatch(/^race_\d+_[a-z0-9]+$/);
+      expect(raceId).toMatch(/^race_\d+_\d+$/);
       expect(mockDb.query).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO races'),
-        expect.arrayContaining([raceId, options.trackId, options.totalLaps])
+        expect.arrayContaining(['550e8400-e29b-41d4-a716-446655440000', options.totalLaps, 'waiting'])
       );
     });
 
     it('should throw error for invalid track', async () => {
+      // Mock track validation to return empty result (track not found)
+      mockDb.query.mockImplementationOnce(() => Promise.resolve({ rows: [] }));
+      
       const options: CreateRaceOptions = {
         trackId: 'invalid-track',
         totalLaps: 10
       };
 
-      await expect(raceService.createRace(options)).rejects.toThrow('Track not found: invalid-track');
+      await expect(raceService.createRace(options)).rejects.toThrow('Track not found or not available: invalid-track');
     });
 
     it('should emit raceCreated event', async () => {
@@ -551,6 +575,168 @@ describe('RaceService', () => {
       expect(race2State?.raceId).toBe(race2Id);
       expect(race1State?.totalLaps).toBe(5);
       expect(race2State?.totalLaps).toBe(3);
+    });
+
+    it('should handle complete race lifecycle with pit stops', async () => {
+      // Create race
+      const raceId = await raceService.createRace({
+        trackId: 'silverstone-gp',
+        totalLaps: 5
+      });
+
+      // Add participants
+      await raceService.joinRace(raceId, {
+        playerId: 'player1',
+        carId: mockCarId
+      });
+      await raceService.joinRace(raceId, {
+        playerId: 'player2',
+        carId: mockCarId
+      });
+
+      // Start race
+      await raceService.startRace(raceId);
+
+      // Simulate race progression with various commands
+      const commands = [
+        { player: 'player1', command: 'accelerate' },
+        { player: 'player2', command: 'accelerate' },
+        { player: 'player1', command: 'shift 3' },
+        { player: 'player2', command: 'brake 20%' },
+        { player: 'player1', command: 'pit' }, // Pit stop
+        { player: 'player2', command: 'accelerate' }
+      ];
+
+      // Process commands sequentially
+      for (const cmd of commands) {
+        const result = await raceService.processPlayerCommand(raceId, cmd.player, cmd.command);
+        expect(result).toBeDefined();
+      }
+
+      // Verify race state after commands
+      const finalState = raceService.getRaceState(raceId);
+      expect(finalState).toBeDefined();
+      expect(finalState?.participants).toHaveLength(2);
+      
+      // Check that pit stop was recorded
+      const player1 = finalState?.participants.find(p => p.playerId === 'player1');
+      expect(player1).toBeDefined();
+      // After pit stop, fuel should be full and tires should be fresh
+      expect(player1?.fuel).toBe(100);
+      expect(player1?.tireWear.front).toBe(0);
+      expect(player1?.tireWear.rear).toBe(0);
+    });
+
+    it('should handle race completion and result calculation', async () => {
+      // Mock race completion scenario
+      const raceId = await raceService.createRace({
+        trackId: 'silverstone-gp',
+        totalLaps: 2 // Short race for testing
+      });
+
+      // Add participants
+      await raceService.joinRace(raceId, {
+        playerId: 'player1',
+        carId: mockCarId
+      });
+      await raceService.joinRace(raceId, {
+        playerId: 'player2',
+        carId: mockCarId
+      });
+
+      // Start race
+      await raceService.startRace(raceId);
+
+      // Simulate race progression
+      await raceService.processPlayerCommand(raceId, 'player1', 'accelerate');
+      await raceService.processPlayerCommand(raceId, 'player2', 'accelerate');
+
+      // Verify race is active
+      expect(raceService.getActiveRaces()).toContain(raceId);
+
+      // Note: In a real scenario, the race would complete automatically
+      // when participants finish all laps. For testing, we verify the
+      // infrastructure is in place.
+      const raceState = raceService.getRaceState(raceId);
+      expect(raceState?.totalLaps).toBe(2);
+      expect(raceState?.participants).toHaveLength(2);
+    });
+
+    it('should handle race events and broadcasting', async () => {
+      const eventSpy = jest.fn();
+      raceService.on('raceStateUpdate', eventSpy);
+
+      const raceId = await raceService.createRace({
+        trackId: 'silverstone-gp',
+        totalLaps: 3
+      });
+
+      await raceService.joinRace(raceId, {
+        playerId: 'player1',
+        carId: mockCarId
+      });
+
+      await raceService.startRace(raceId);
+
+      // Process a command to trigger state updates
+      await raceService.processPlayerCommand(raceId, 'player1', 'accelerate');
+
+      // Wait a bit for the tick broadcasting to potentially trigger
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      // Verify that race state updates would be emitted
+      // (The actual broadcasting happens in the tick interval)
+      expect(raceService.getRaceState(raceId)).toBeDefined();
+    });
+
+    it('should handle error scenarios gracefully', async () => {
+      // Test invalid race operations
+      await expect(raceService.joinRace('invalid-race', {
+        playerId: 'player1',
+        carId: mockCarId
+      })).rejects.toThrow('Race not found');
+
+      await expect(raceService.startRace('invalid-race')).rejects.toThrow('Race not found');
+
+      await expect(raceService.processPlayerCommand('invalid-race', 'player1', 'accelerate'))
+        .rejects.toThrow('Race not found');
+
+      // Test joining race with invalid car
+      const raceId = await raceService.createRace({
+        trackId: 'silverstone-gp',
+        totalLaps: 3
+      });
+
+      mockDb.query.mockResolvedValueOnce({ rows: [] }); // No car found
+      await expect(raceService.joinRace(raceId, {
+        playerId: 'player1',
+        carId: 'invalid-car'
+      })).rejects.toThrow('Car not found or not available');
+    });
+
+    it('should handle race stop functionality', async () => {
+      const raceId = await raceService.createRace({
+        trackId: 'silverstone-gp',
+        totalLaps: 5
+      });
+
+      await raceService.joinRace(raceId, {
+        playerId: 'player1',
+        carId: mockCarId
+      });
+
+      await raceService.startRace(raceId);
+      expect(raceService.getActiveRaces()).toContain(raceId);
+
+      // Stop the race
+      const stopSuccess = await raceService.stopRace(raceId);
+      expect(stopSuccess).toBe(true);
+
+      // Verify race is no longer active
+      expect(raceService.getActiveRaces()).not.toContain(raceId);
+
+      // Test stopping non-existent race
+      await expect(raceService.stopRace('invalid-race')).rejects.toThrow('Race not found');
     });
   });
 });

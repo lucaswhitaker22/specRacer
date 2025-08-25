@@ -69,7 +69,7 @@ class RedisService {
             catch (error) {
                 console.error('Error during periodic cleanup:', error);
             }
-        }, 60 * 60 * 1000);
+        }, 15 * 60 * 1000);
     }
     async emergencyRecovery() {
         try {

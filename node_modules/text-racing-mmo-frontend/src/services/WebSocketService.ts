@@ -38,7 +38,7 @@ export class WebSocketService {
 
   constructor(config?: Partial<WebSocketConfig>) {
     this.config = {
-      url: import.meta.env.VITE_WEBSOCKET_URL || 'ws://localhost:3001',
+      url: import.meta.env.VITE_WEBSOCKET_URL || '/ws',
       timeout: 5000,
       maxReconnectAttempts: 10,
       reconnectDelay: 1000,

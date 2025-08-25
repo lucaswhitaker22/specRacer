@@ -136,8 +136,31 @@ export class ConnectionManager {
       .map(state => state.playerId!);
   }
 
+  // Broadcast message to all participants in a race
+  public broadcastToRace(raceId: string, event: string, data: any): void {
+    const participants = this.raceParticipants.get(raceId);
+    if (!participants) return;
+
+    participants.forEach(socketId => {
+      const socket = this.connections.get(socketId);
+      if (socket) {
+        socket.emit(event, data);
+      }
+    });
+  }
+
+  // Send message to specific player
+  public sendToPlayer(playerId: string, event: string, data: any): boolean {
+    const socket = this.getSocketByPlayerId(playerId);
+    if (socket) {
+      socket.emit(event, data);
+      return true;
+    }
+    return false;
+  }
+
   // Clean up stale connections (connections that haven't pinged recently)
-  public cleanupStaleConnections(maxAge: number = 120000): void { // 2 minutes default
+  public cleanupStaleConnections(maxAge: number = 60000): void { // Reduced to 1 minute
     const now = Date.now();
     const staleConnections: string[] = [];
 

@@ -169,7 +169,7 @@ exports.PhysicsEngine = PhysicsEngine;
 PhysicsEngine.TICK_RATE = 10;
 PhysicsEngine.TICK_DURATION = 1000 / PhysicsEngine.TICK_RATE;
 PhysicsEngine.DEFAULT_TRACK = {
-    id: 'silverstone-gp',
+    id: '550e8400-e29b-41d4-a716-446655440000',
     name: 'Silverstone Grand Prix Circuit',
     length: 5891,
     sectors: 3,

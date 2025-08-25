@@ -97,7 +97,7 @@ const createQuickRace = async () => {
   
   try {
     const raceId = await raceService.createRace({
-      trackId: 'silverstone-gp',
+      trackId: 'default', // Let backend handle default track
       totalLaps: 5,
       maxParticipants: 8
     })

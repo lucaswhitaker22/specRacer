@@ -55,7 +55,7 @@ export interface ErrorLogEntry {
 export class ErrorLogger {
   private static instance: ErrorLogger;
   private logBuffer: ErrorLogEntry[] = [];
-  private readonly maxBufferSize = 1000;
+  private readonly maxBufferSize = 200; // Reduced from 1000
   private readonly logDirectory = path.join(process.cwd(), 'logs');
   private flushInterval: NodeJS.Timeout | null = null;
 
@@ -224,6 +224,21 @@ export class ErrorLogger {
       }
     } catch (error) {
       console.error('Failed to cleanup old logs:', error);
+    }
+  }
+
+  /**
+   * Force memory cleanup
+   */
+  public forceCleanup(): void {
+    // Flush current buffer to file immediately
+    this.flushLogs().catch(error => {
+      console.error('Failed to flush logs during cleanup:', error);
+    });
+    
+    // Clear buffer more aggressively
+    if (this.logBuffer.length > 50) {
+      this.logBuffer = this.logBuffer.slice(-50);
     }
   }
 

@@ -55,8 +55,8 @@ export class HealthMonitorService extends EventEmitter {
   private monitoringInterval: NodeJS.Timeout | null = null;
   private healthHistory: SystemHealth[] = [];
   private activeAlerts = new Map<string, HealthAlert>();
-  private readonly maxHistorySize = 1000;
-  private readonly checkInterval = 30000; // 30 seconds
+  private readonly maxHistorySize = 100; // Reduced from 1000
+  private readonly checkInterval = 60000; // Increased to 60 seconds
   private startTime = Date.now();
 
   private constructor() {
@@ -156,6 +156,34 @@ export class HealthMonitorService extends EventEmitter {
     return false;
   }
 
+  /**
+   * Force garbage collection and cleanup
+   */
+  public forceCleanup(): void {
+    // Clean up old resolved alerts
+    const now = Date.now();
+    const oneHourAgo = now - (60 * 60 * 1000);
+    
+    for (const [alertId, alert] of this.activeAlerts.entries()) {
+      if (alert.resolved && alert.timestamp < oneHourAgo) {
+        this.activeAlerts.delete(alertId);
+      }
+    }
+
+    // Trim health history more aggressively if memory is high
+    const memoryUsage = process.memoryUsage();
+    const memoryPercentage = (memoryUsage.heapUsed / memoryUsage.heapTotal) * 100;
+    
+    if (memoryPercentage > 80) {
+      this.healthHistory = this.healthHistory.slice(-50); // Keep only last 50 entries
+      
+      // Force garbage collection if available
+      if (global.gc) {
+        global.gc();
+      }
+    }
+  }
+
   private async performHealthCheck(): Promise<void> {
     try {
       const health = await this.checkSystemHealth();
@@ -168,6 +196,11 @@ export class HealthMonitorService extends EventEmitter {
 
       // Check for alerts
       this.checkForAlerts(health);
+
+      // Perform cleanup if memory is high
+      if (health.metrics.memoryUsage.percentage > 80) {
+        this.forceCleanup();
+      }
 
       // Emit health update
       this.emit('healthUpdate', health);

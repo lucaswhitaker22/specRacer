@@ -22,10 +22,18 @@ class RaceService extends events_1.EventEmitter {
         this.trackConfigurations.set(defaultTrack.id, defaultTrack);
     }
     async createRace(options) {
-        const raceId = this.generateRaceId();
-        const track = this.trackConfigurations.get(options.trackId);
+        let trackId = options.trackId;
+        if (!trackId || trackId === 'silverstone-gp' || trackId === 'default') {
+            trackId = '550e8400-e29b-41d4-a716-446655440000';
+        }
+        await this.validateTrackExists(trackId);
+        const correctedOptions = { ...options, trackId };
+        const raceId = await this.createRaceInDatabase(correctedOptions);
+        let track = this.trackConfigurations.get(trackId);
         if (!track) {
-            throw new Error(`Track not found: ${options.trackId}`);
+            track = PhysicsEngine_1.PhysicsEngine.getDefaultTrack();
+            track.id = trackId;
+            this.trackConfigurations.set(trackId, track);
         }
         const raceConfig = {
             raceId,
@@ -238,10 +246,15 @@ class RaceService extends events_1.EventEmitter {
         await this.updateRaceStatus(raceId, 'completed', undefined, new Date());
         this.emit('raceCompleted', { raceId });
     }
+    async createRaceInDatabase(options) {
+        const db = (0, connection_1.getDatabaseConnection)();
+        const result = await db.query(`INSERT INTO races (track_id, total_laps, status) 
+       VALUES ($1, $2, $3) RETURNING id`, [options.trackId, options.totalLaps, 'waiting']);
+        return result.rows[0].id;
+    }
     async persistRaceCreation(config) {
         const db = (0, connection_1.getDatabaseConnection)();
-        await db.query(`INSERT INTO races (id, track_id, total_laps, race_data, status) 
-       VALUES ($1, $2, $3, $4, $5)`, [config.raceId, config.trackId, config.totalLaps, JSON.stringify(config), 'waiting']);
+        await db.query(`UPDATE races SET race_data = $2 WHERE id = $1`, [config.raceId, JSON.stringify(config)]);
     }
     async persistRaceParticipant(raceId, playerId, carId) {
         const db = (0, connection_1.getDatabaseConnection)();
@@ -294,8 +307,12 @@ class RaceService extends events_1.EventEmitter {
             ]);
         }
     }
-    generateRaceId() {
-        return `race_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    async validateTrackExists(trackId) {
+        const db = (0, connection_1.getDatabaseConnection)();
+        const result = await db.query('SELECT id FROM tracks WHERE id = $1 AND is_active = true', [trackId]);
+        if (result.rows.length === 0) {
+            throw new Error(`Track not found or not available: ${trackId}`);
+        }
     }
     async validateCarSelection(carId) {
         const db = (0, connection_1.getDatabaseConnection)();

@@ -101,7 +101,7 @@ class ConnectionManager {
             .filter(state => state.playerId)
             .map(state => state.playerId);
     }
-    cleanupStaleConnections(maxAge = 120000) {
+    cleanupStaleConnections(maxAge = 60000) {
         const now = Date.now();
         const staleConnections = [];
         this.connectionStates.forEach((state, socketId) => {

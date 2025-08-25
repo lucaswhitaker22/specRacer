@@ -101,6 +101,22 @@ async function initializeServices() {
         { alertId: alert.id, component: alert.component, severity: alert.severity }
       );
     });
+
+    // Set up periodic memory cleanup
+    setInterval(() => {
+      const memoryUsage = process.memoryUsage();
+      const memoryPercentage = (memoryUsage.heapUsed / memoryUsage.heapTotal) * 100;
+      
+      if (memoryPercentage > 85) {
+        logger.forceCleanup();
+        healthMonitor.forceCleanup();
+        
+        // Force garbage collection if available
+        if (global.gc) {
+          global.gc();
+        }
+      }
+    }, 5 * 60 * 1000); // Every 5 minutes
     
     logger.logInfo('All services initialized successfully', 'SERVICES_INITIALIZED');
     console.log('All services initialized successfully');

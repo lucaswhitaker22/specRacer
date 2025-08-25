@@ -48,6 +48,7 @@ export declare class ErrorLogger {
     };
     flushLogs(): Promise<void>;
     cleanupOldLogs(daysToKeep?: number): Promise<void>;
+    forceCleanup(): void;
     shutdown(): Promise<void>;
     private addLogEntry;
     private initializeLogDirectory;
