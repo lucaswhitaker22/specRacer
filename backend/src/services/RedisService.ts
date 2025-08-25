@@ -22,8 +22,8 @@ export class RedisService {
       // Start cleanup interval for expired sessions
       this.startCleanupInterval();
     } catch (error) {
-      console.error('Failed to initialize Redis services:', error);
-      throw error;
+      console.warn('Redis not available - running in degraded mode without caching:', (error as Error).message);
+      // Don't throw error, allow server to continue without Redis
     }
   }
 
@@ -236,6 +236,109 @@ export class RedisService {
           activeSessions: 0
         }
       };
+    }
+  }
+
+  /**
+   * Direct Redis operations for state recovery service
+   */
+  async get(key: string): Promise<string | null> {
+    try {
+      const client = redisManager.getClient();
+      return await client.get(key);
+    } catch (error) {
+      console.error(`Error getting key ${key}:`, error);
+      return null;
+    }
+  }
+
+  async setWithExpiry(key: string, value: string, expiry: number): Promise<boolean> {
+    try {
+      const client = redisManager.getClient();
+      await client.setEx(key, expiry, value);
+      return true;
+    } catch (error) {
+      console.error(`Error setting key ${key}:`, error);
+      return false;
+    }
+  }
+
+  async delete(key: string): Promise<boolean> {
+    try {
+      const client = redisManager.getClient();
+      const result = await client.del(key);
+      return result > 0;
+    } catch (error) {
+      console.error(`Error deleting key ${key}:`, error);
+      return false;
+    }
+  }
+
+  async listPush(key: string, value: string): Promise<number> {
+    try {
+      const client = redisManager.getClient();
+      return await client.lPush(key, value);
+    } catch (error) {
+      console.error(`Error pushing to list ${key}:`, error);
+      return 0;
+    }
+  }
+
+  async listRange(key: string, start: number, stop: number): Promise<string[]> {
+    try {
+      const client = redisManager.getClient();
+      return await client.lRange(key, start, stop);
+    } catch (error) {
+      console.error(`Error getting list range ${key}:`, error);
+      return [];
+    }
+  }
+
+  async listLength(key: string): Promise<number> {
+    try {
+      const client = redisManager.getClient();
+      return await client.lLen(key);
+    } catch (error) {
+      console.error(`Error getting list length ${key}:`, error);
+      return 0;
+    }
+  }
+
+  async listTrim(key: string, start: number, stop: number): Promise<boolean> {
+    try {
+      const client = redisManager.getClient();
+      await client.lTrim(key, start, stop);
+      return true;
+    } catch (error) {
+      console.error(`Error trimming list ${key}:`, error);
+      return false;
+    }
+  }
+
+  async getKeys(pattern: string): Promise<string[]> {
+    try {
+      const client = redisManager.getClient();
+      return await client.keys(pattern);
+    } catch (error) {
+      console.error(`Error getting keys with pattern ${pattern}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Race state operations for state recovery
+   */
+  async getRaceState(raceId: string): Promise<any> {
+    return await this.raceStateCache.getRaceState(raceId);
+  }
+
+  async setRaceState(raceId: string, raceState: any): Promise<boolean> {
+    try {
+      await this.raceStateCache.cacheRaceState(raceState);
+      return true;
+    } catch (error) {
+      console.error(`Error setting race state ${raceId}:`, error);
+      return false;
     }
   }
 }

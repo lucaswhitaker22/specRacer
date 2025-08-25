@@ -92,8 +92,8 @@ npm run type-check
 Copy `.env.example` to `.env` and configure:
 
 ```env
-VITE_WEBSOCKET_URL=ws://localhost:3001
-VITE_API_BASE_URL=http://localhost:3001/api
+VITE_WEBSOCKET_URL=ws://localhost:3000
+VITE_API_BASE_URL=http://localhost:3000/api
 VITE_NODE_ENV=development
 ```
 

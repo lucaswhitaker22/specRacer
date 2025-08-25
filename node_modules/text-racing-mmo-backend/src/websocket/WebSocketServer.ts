@@ -9,11 +9,16 @@ import type { Command } from '../../../shared/types/commands';
 import type { RaceState, RaceEvent } from '../../../shared/types/index';
 import { ConnectionManager } from './ConnectionManager';
 import { EventHandler } from './EventHandler';
+import { ErrorLogger, AppError } from '../utils/ErrorLogger';
+import { StateRecoveryService } from '../services/StateRecoveryService';
 
 export class WebSocketServer {
   private io: SocketIOServer;
   private connectionManager: ConnectionManager;
   private eventHandler: EventHandler;
+  private logger: ErrorLogger;
+  private stateRecovery: StateRecoveryService;
+  private healthCheckInterval: NodeJS.Timeout | null = null;
 
   constructor(httpServer: HTTPServer) {
     this.io = new SocketIOServer(httpServer, {
@@ -27,8 +32,11 @@ export class WebSocketServer {
 
     this.connectionManager = new ConnectionManager();
     this.eventHandler = new EventHandler(this.connectionManager);
+    this.logger = ErrorLogger.getInstance();
+    this.stateRecovery = StateRecoveryService.getInstance();
     
     this.setupEventHandlers();
+    this.startHealthChecks();
   }
 
   private setupEventHandlers(): void {
@@ -43,6 +51,10 @@ export class WebSocketServer {
         try {
           await this.eventHandler.handleAuthentication(socket, data);
         } catch (error) {
+          this.logger.logError(error as Error, {
+            socketId: socket.id,
+            operation: 'authentication'
+          });
           this.sendError(socket, 'AUTH_FAILED', 'Authentication failed');
         }
       });
@@ -52,6 +64,17 @@ export class WebSocketServer {
         try {
           await this.eventHandler.handleRaceCommand(socket, command);
         } catch (error) {
+          this.logger.logError(error as Error, {
+            socketId: socket.id,
+            operation: 'race_command',
+            command: command?.type
+          });
+          
+          // Check if we need to recover race state
+          if (error instanceof AppError && error.code === 'RACE_STATE_CORRUPTED') {
+            await this.handleRaceStateCorruption(command.raceId);
+          }
+          
           this.sendError(socket, 'COMMAND_FAILED', 'Failed to process command');
         }
       });
@@ -61,6 +84,11 @@ export class WebSocketServer {
         try {
           await this.eventHandler.handleRaceJoin(socket, data);
         } catch (error) {
+          this.logger.logError(error as Error, {
+            socketId: socket.id,
+            operation: 'race_join',
+            raceId: data?.raceId
+          });
           this.sendError(socket, 'JOIN_FAILED', 'Failed to join race');
         }
       });
@@ -70,6 +98,11 @@ export class WebSocketServer {
         try {
           await this.eventHandler.handleRaceLeave(socket, data);
         } catch (error) {
+          this.logger.logError(error as Error, {
+            socketId: socket.id,
+            operation: 'race_leave',
+            raceId: data?.raceId
+          });
           this.sendError(socket, 'LEAVE_FAILED', 'Failed to leave race');
         }
       });
@@ -137,9 +170,87 @@ export class WebSocketServer {
     return this.connectionManager.getStats();
   }
 
+  // Handle race state corruption
+  private async handleRaceStateCorruption(raceId: string): Promise<void> {
+    try {
+      this.logger.logWarning(
+        'Attempting race state recovery',
+        'STATE_RECOVERY_ATTEMPT',
+        { raceId }
+      );
+
+      const recovery = await this.stateRecovery.recoverRaceState(raceId);
+      
+      if (recovery.success) {
+        // Broadcast recovery to all participants
+        const participants = this.connectionManager.getRaceParticipants(raceId);
+        participants.forEach(socketId => {
+          const socket = this.connectionManager.getSocket(socketId);
+          if (socket) {
+            socket.emit('race:recovered', {
+              message: 'Race state has been recovered',
+              recoveredState: recovery.recoveredState || recovery.fallbackState
+            });
+          }
+        });
+      } else {
+        // Broadcast failure to all participants
+        const participants = this.connectionManager.getRaceParticipants(raceId);
+        participants.forEach(socketId => {
+          const socket = this.connectionManager.getSocket(socketId);
+          if (socket) {
+            this.sendError(socket, 'RACE_RECOVERY_FAILED', 'Unable to recover race state');
+          }
+        });
+      }
+    } catch (error) {
+      this.logger.logError(error as Error, {
+        raceId,
+        operation: 'state_recovery'
+      });
+    }
+  }
+
+  // Start health checks
+  private startHealthChecks(): void {
+    this.healthCheckInterval = setInterval(() => {
+      this.performHealthCheck();
+    }, 30000); // Every 30 seconds
+  }
+
+  // Perform health check
+  private performHealthCheck(): void {
+    try {
+      const stats = this.getConnectionStats();
+      
+      this.logger.logInfo(
+        'WebSocket health check',
+        'HEALTH_CHECK',
+        {
+          totalConnections: stats.totalConnections,
+          authenticatedConnections: stats.authenticatedConnections,
+          timestamp: Date.now()
+        }
+      );
+
+      // Check for stale connections
+      this.connectionManager.cleanupStaleConnections();
+    } catch (error) {
+      this.logger.logError(error as Error, {
+        operation: 'health_check'
+      });
+    }
+  }
+
   // Graceful shutdown
   public async shutdown(): Promise<void> {
     console.log('Shutting down WebSocket server...');
+    
+    // Stop health checks
+    if (this.healthCheckInterval) {
+      clearInterval(this.healthCheckInterval);
+      this.healthCheckInterval = null;
+    }
     
     // Notify all connected clients
     this.io.emit('error' as any, {
@@ -147,6 +258,9 @@ export class WebSocketServer {
       code: 'SERVER_SHUTDOWN',
       timestamp: Date.now()
     });
+
+    // Give clients time to handle shutdown message
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Close all connections
     this.io.close();

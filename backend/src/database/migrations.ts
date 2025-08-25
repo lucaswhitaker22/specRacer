@@ -10,7 +10,9 @@ export interface Migration {
 }
 
 class MigrationManager {
-  private db = getDatabaseConnection();
+  private get db() {
+    return getDatabaseConnection();
+  }
 
   /**
    * Initialize migrations table

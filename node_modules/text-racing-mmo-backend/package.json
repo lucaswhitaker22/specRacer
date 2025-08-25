@@ -9,10 +9,12 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "test": "jest",
     "test:watch": "jest --watch",
+    "db:create": "node setup-database.js",
+    "db:reset": "node reset-database.js",
     "db:init": "ts-node src/database/init.ts",
     "db:seed": "ts-node src/database/seed.ts",
     "db:seed-cars": "ts-node src/database/seedCars.ts",
-    "db:setup": "npm run db:init && npm run db:seed"
+    "db:setup": "npm run db:create && npm run db:init && npm run db:seed-cars"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",

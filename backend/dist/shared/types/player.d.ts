@@ -43,4 +43,12 @@ export interface RaceResult {
     points: number;
     completedAt: Date;
 }
+export interface LeagueStanding {
+    playerId: string;
+    username: string;
+    leaguePoints: number;
+    totalRaces: number;
+    wins: number;
+    position: number;
+}
 //# sourceMappingURL=player.d.ts.map

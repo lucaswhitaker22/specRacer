@@ -18,7 +18,6 @@ export declare class DatabaseConnection {
     query(text: string, params?: any[]): Promise<any>;
     getClient(): Promise<PoolClient>;
     transaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T>;
-    private runMigrations;
     isHealthy(): boolean;
     getPoolStats(): {
         totalCount: number;

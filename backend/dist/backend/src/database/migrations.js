@@ -38,8 +38,8 @@ const connection_1 = require("./connection");
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 class MigrationManager {
-    constructor() {
-        this.db = (0, connection_1.getDatabaseConnection)();
+    get db() {
+        return (0, connection_1.getDatabaseConnection)();
     }
     async initializeMigrationsTable() {
         const createMigrationsTableSql = `

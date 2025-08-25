@@ -582,6 +582,40 @@ export class RaceService extends EventEmitter {
     const pointsTable = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
     return position <= pointsTable.length ? pointsTable[position - 1] : 0;
   }
+
+  /**
+   * Get available races that can be joined
+   */
+  async getAvailableRaces(): Promise<any[]> {
+    const db = getDatabaseConnection();
+    const result = await db.query(
+      `SELECT r.id as race_id, r.track_id, r.total_laps, 
+              COUNT(rp.player_id) as current_participants,
+              COALESCE(r.race_data->>'maxParticipants', '20')::int as max_participants,
+              r.status
+       FROM races r
+       LEFT JOIN race_participants rp ON r.id = rp.race_id
+       WHERE r.status = 'waiting'
+       GROUP BY r.id, r.track_id, r.total_laps, r.race_data
+       ORDER BY r.created_at DESC`
+    );
+
+    return result.rows.map((row: any) => ({
+      raceId: row.race_id,
+      trackId: row.track_id,
+      totalLaps: row.total_laps,
+      currentParticipants: parseInt(row.current_participants),
+      maxParticipants: row.max_participants,
+      status: row.status
+    }));
+  }
+
+  /**
+   * Get race results (alias for getRaceResult for API consistency)
+   */
+  async getRaceResults(raceId: string): Promise<RaceResult | null> {
+    return this.getRaceResult(raceId);
+  }
 }
 
 interface PitStopState {

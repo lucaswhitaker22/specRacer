@@ -8,20 +8,14 @@ import {
   LoginCredentials, 
   RegisterData, 
   AuthToken, 
-  RaceResult 
+  RaceResult,
+  LeagueStanding
 } from '../../../shared/types/player';
 
-export interface LeagueStanding {
-  playerId: string;
-  username: string;
-  leaguePoints: number;
-  totalRaces: number;
-  wins: number;
-  position: number;
-}
-
 export class PlayerService {
-  private db = getDatabaseConnection();
+  private get db() {
+    return getDatabaseConnection();
+  }
   private readonly JWT_SECRET = process.env.JWT_SECRET || 'default-secret-key';
   private readonly JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || '24h';
   private readonly SALT_ROUNDS = 12;

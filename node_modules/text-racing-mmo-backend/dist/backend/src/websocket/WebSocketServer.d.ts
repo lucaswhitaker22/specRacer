@@ -4,6 +4,9 @@ export declare class WebSocketServer {
     private io;
     private connectionManager;
     private eventHandler;
+    private logger;
+    private stateRecovery;
+    private healthCheckInterval;
     constructor(httpServer: HTTPServer);
     private setupEventHandlers;
     broadcastRaceUpdate(raceId: string, raceState: RaceState): void;
@@ -14,6 +17,9 @@ export declare class WebSocketServer {
         totalConnections: number;
         authenticatedConnections: number;
     };
+    private handleRaceStateCorruption;
+    private startHealthChecks;
+    private performHealthCheck;
     shutdown(): Promise<void>;
 }
 //# sourceMappingURL=WebSocketServer.d.ts.map

@@ -12,6 +12,10 @@ export class RedisManager {
       url: redisUrl,
       socket: {
         reconnectStrategy: (retries) => {
+          // In development, don't retry if Redis is not available
+          if (process.env.NODE_ENV === 'development' && retries > 3) {
+            return false; // Stop retrying
+          }
           // Exponential backoff with max delay of 30 seconds
           return Math.min(retries * 50, 30000);
         }
@@ -44,7 +48,16 @@ export class RedisManager {
 
   async connect(): Promise<void> {
     try {
-      await this.client.connect();
+      // Add timeout for Redis connection in development
+      const connectPromise = this.client.connect();
+      if (process.env.NODE_ENV === 'development') {
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Redis connection timeout')), 5000);
+        });
+        await Promise.race([connectPromise, timeoutPromise]);
+      } else {
+        await connectPromise;
+      }
     } catch (error) {
       console.error('Failed to connect to Redis:', error);
       throw error;

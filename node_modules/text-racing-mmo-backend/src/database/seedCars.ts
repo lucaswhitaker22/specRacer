@@ -7,7 +7,7 @@
 
 import * as dotenv from 'dotenv';
 import { CarService } from '../services/CarService';
-import { getDatabaseConnection } from './connection';
+import { getDatabaseConnection, createDatabaseConnection, getDatabaseConfigFromEnv } from './connection';
 
 // Load environment variables
 dotenv.config();
@@ -20,8 +20,15 @@ async function seedCarData() {
     CarService.initialize();
     const cars = CarService.getAvailableCars();
     
-    // Get database connection
-    const db = getDatabaseConnection();
+    // Get or create database connection
+    let db;
+    try {
+      db = getDatabaseConnection();
+    } catch {
+      const config = getDatabaseConfigFromEnv();
+      db = createDatabaseConnection(config);
+      await db.initialize();
+    }
     
     console.log(`Inserting ${cars.length} car models...`);
     

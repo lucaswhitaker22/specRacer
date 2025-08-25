@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS players (
 
 -- Cars table
 CREATE TABLE IF NOT EXISTS cars (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id VARCHAR(100) PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     manufacturer VARCHAR(50) NOT NULL,
     year INTEGER NOT NULL,
@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS race_participants (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     race_id UUID NOT NULL REFERENCES races(id) ON DELETE CASCADE,
     player_id UUID NOT NULL REFERENCES players(id),
-    car_id UUID NOT NULL REFERENCES cars(id),
+    car_id VARCHAR(100) NOT NULL REFERENCES cars(id),
     final_position INTEGER,
     final_time INTEGER, -- in milliseconds
     race_events JSONB,
@@ -88,11 +88,14 @@ END;
 $$ language 'plpgsql';
 
 -- Apply update triggers
+DROP TRIGGER IF EXISTS update_players_updated_at ON players;
 CREATE TRIGGER update_players_updated_at BEFORE UPDATE ON players
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_cars_updated_at ON cars;
 CREATE TRIGGER update_cars_updated_at BEFORE UPDATE ON cars
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_races_updated_at ON races;
 CREATE TRIGGER update_races_updated_at BEFORE UPDATE ON races
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

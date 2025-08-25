@@ -62,9 +62,6 @@ export class DatabaseConnection {
       
       console.log('Database connection established successfully');
       this.isConnected = true;
-
-      // Run migrations
-      await this.runMigrations();
     } catch (error) {
       console.error('Failed to initialize database connection:', error);
       this.isConnected = false;
@@ -125,28 +122,7 @@ export class DatabaseConnection {
     }
   }
 
-  /**
-   * Run database migrations
-   */
-  private async runMigrations(): Promise<void> {
-    try {
-      const schemaPath = path.join(__dirname, 'schema.sql');
-      
-      if (!fs.existsSync(schemaPath)) {
-        console.warn('Schema file not found, skipping migrations');
-        return;
-      }
 
-      const schemaSql = fs.readFileSync(schemaPath, 'utf8');
-      
-      console.log('Running database migrations...');
-      await this.query(schemaSql);
-      console.log('Database migrations completed successfully');
-    } catch (error) {
-      console.error('Failed to run migrations:', error);
-      throw error;
-    }
-  }
 
   /**
    * Check if database is connected

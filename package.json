@@ -9,11 +9,21 @@
     "shared"
   ],
   "scripts": {
-    "install:all": "npm install && npm install --prefix frontend && npm install --prefix backend",
-    "build:all": "npm run build --prefix backend && npm run build --prefix frontend",
+    "install:all": "npm install && npm install --prefix frontend && npm install --prefix backend && npm install --prefix shared",
+    "build:all": "npm run build --prefix shared && npm run build --prefix backend && npm run build --prefix frontend",
     "dev:backend": "npm run dev --prefix backend",
     "dev:frontend": "npm run dev --prefix frontend",
-    "test:all": "npm run test --prefix backend && npm run test --prefix frontend"
+    "dev:shared": "npm run dev --prefix shared",
+    "test:all": "npm run test --prefix backend && npm run test --prefix frontend",
+    "start": "npm run start --prefix backend",
+    "setup:db": "npm run setup:db --prefix backend",
+    "reset:db": "npm run reset:db --prefix backend",
+    "docker:build": "docker build -t text-racing-mmo .",
+    "docker:run": "docker-compose up -d",
+    "docker:stop": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "deploy:dev": "docker-compose up -d",
+    "deploy:prod": "docker-compose --profile production up -d"
   },
   "keywords": ["racing", "mmo", "game", "websocket", "vue", "nodejs"],
   "author": "",

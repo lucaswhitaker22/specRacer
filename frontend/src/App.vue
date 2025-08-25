@@ -2,8 +2,14 @@
   <div id="app">
     <header class="app-header">
       <h1>Text Racing MMO</h1>
-      <div class="connection-status" :class="{ connected: isConnected, disconnected: !isConnected }">
-        {{ isConnected ? 'Connected' : 'Disconnected' }}
+      <div class="header-right">
+        <div v-if="currentPlayer" class="user-info">
+          Welcome, {{ currentPlayer.username }}!
+          <button @click="handleLogout" class="logout-button">Logout</button>
+        </div>
+        <div class="connection-status" :class="{ connected: isConnected, disconnected: !isConnected }">
+          {{ isConnected ? 'Connected' : 'Disconnected' }}
+        </div>
       </div>
     </header>
 
@@ -16,18 +22,31 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useWebSocketStore } from './stores/websocket'
 import { useErrorStore } from './stores/error'
+import { usePlayerStore } from './stores/player'
 import ErrorNotification from './components/ErrorNotification.vue'
 
+const router = useRouter()
 const websocketStore = useWebSocketStore()
 const errorStore = useErrorStore()
+const playerStore = usePlayerStore()
 
 const isConnected = computed(() => websocketStore.isConnected)
+const currentPlayer = computed(() => playerStore.currentPlayer)
+
+const handleLogout = () => {
+  playerStore.logout()
+  websocketStore.disconnect()
+  router.push('/login')
+}
 
 onMounted(() => {
-  // Initialize WebSocket connection
-  websocketStore.connect()
+  // Initialize WebSocket connection only if authenticated
+  if (playerStore.isAuthenticated) {
+    websocketStore.connect()
+  }
 })
 
 onUnmounted(() => {
@@ -55,6 +74,34 @@ onUnmounted(() => {
 .app-header h1 {
   margin: 0;
   font-size: 1.5rem;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.9rem;
+}
+
+.logout-button {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+}
+
+.logout-button:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .connection-status {

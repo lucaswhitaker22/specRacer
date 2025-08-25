@@ -6,15 +6,16 @@ const playerService = new PlayerService();
 /**
  * Middleware to authenticate JWT tokens
  */
-export async function authenticateToken(req: Request, res: Response, next: NextFunction) {
+export async function authenticateToken(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
     if (!token) {
-      return res.status(401).json({
+      res.status(401).json({
         error: 'Access token required'
       });
+      return;
     }
 
     const playerId = await playerService.verifyToken(token);
@@ -24,7 +25,7 @@ export async function authenticateToken(req: Request, res: Response, next: NextF
     
     next();
   } catch (error) {
-    return res.status(403).json({
+    res.status(403).json({
       error: 'Invalid or expired token'
     });
   }

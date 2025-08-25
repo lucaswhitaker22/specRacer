@@ -1,0 +1,96 @@
+#!/usr/bin/env node
+
+/**
+ * Database setup script for Text Racing MMO
+ * This script helps create the database and user for local development
+ */
+
+const { Client } = require('pg');
+require('dotenv').config();
+
+const DB_NAME = process.env.DB_NAME || 'text_racing_mmo';
+const DB_USER = process.env.DB_USER || 'username';
+const DB_PASSWORD = process.env.DB_PASSWORD || 'password';
+const DB_HOST = process.env.DB_HOST || 'localhost';
+const DB_PORT = process.env.DB_PORT || 5432;
+
+async function setupDatabase() {
+    console.log('🚀 Setting up Text Racing MMO database...');
+
+    // Connect to PostgreSQL as superuser to create database and user
+    const adminClient = new Client({
+        host: DB_HOST,
+        port: DB_PORT,
+        database: 'postgres', // Connect to default postgres database
+        user: 'postgres', // Assuming postgres superuser
+        password: process.env.POSTGRES_PASSWORD || 'postgres'
+    });
+
+    try {
+        await adminClient.connect();
+        console.log('✅ Connected to PostgreSQL');
+
+        // Create user if it doesn't exist
+        try {
+            await adminClient.query(`CREATE USER ${DB_USER} WITH PASSWORD '${DB_PASSWORD}';`);
+            console.log(`✅ Created user: ${DB_USER}`);
+        } catch (error) {
+            if (error.code === '42710') { // User already exists
+                console.log(`ℹ️  User ${DB_USER} already exists`);
+            } else {
+                throw error;
+            }
+        }
+
+        // Create database if it doesn't exist
+        try {
+            await adminClient.query(`CREATE DATABASE ${DB_NAME} OWNER ${DB_USER};`);
+            console.log(`✅ Created database: ${DB_NAME}`);
+        } catch (error) {
+            if (error.code === '42P04') { // Database already exists
+                console.log(`ℹ️  Database ${DB_NAME} already exists`);
+            } else {
+                throw error;
+            }
+        }
+
+        // Grant privileges
+        await adminClient.query(`GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO ${DB_USER};`);
+        console.log(`✅ Granted privileges to ${DB_USER}`);
+
+        await adminClient.end();
+
+        // Test connection with the new user
+        const testClient = new Client({
+            host: DB_HOST,
+            port: DB_PORT,
+            database: DB_NAME,
+            user: DB_USER,
+            password: DB_PASSWORD
+        });
+
+        await testClient.connect();
+        await testClient.query('SELECT NOW()');
+        await testClient.end();
+
+        console.log('✅ Database setup completed successfully!');
+        console.log(`📊 Database: ${DB_NAME}`);
+        console.log(`👤 User: ${DB_USER}`);
+        console.log(`🏠 Host: ${DB_HOST}:${DB_PORT}`);
+        console.log('');
+        console.log('🎯 You can now run: npm run dev');
+
+    } catch (error) {
+        console.error('❌ Database setup failed:', error.message);
+        console.log('');
+        console.log('💡 Make sure PostgreSQL is running and you have the correct credentials.');
+        console.log('💡 You may need to update POSTGRES_PASSWORD in your environment or .env file.');
+        process.exit(1);
+    }
+}
+
+if (require.main === module) {
+    setupDatabase();
+}
+
+module.exports = { setupDatabase };

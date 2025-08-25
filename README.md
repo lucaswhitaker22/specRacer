@@ -1,4 +1,16 @@
+# Text Racing MMO
+
 A browser-based, text-driven MMO racing game where players select real car models and compete in persistent leagues through strategic text commands.
+
+## MVP Features
+
+✅ **Complete Race Flow**: From player login to race completion  
+✅ **Car Selection**: Choose from authentic car models with real specifications  
+✅ **Real-Time Racing**: WebSocket-based live race updates  
+✅ **User Authentication**: Secure player registration and login  
+✅ **Race Management**: Create and join races with other players  
+✅ **Basic UI**: Clean, responsive interface for all game functions  
+✅ **Docker Deployment**: Complete containerized deployment setup
 
 ## Project Structure
 
@@ -32,38 +44,81 @@ text-racing-mmo/
 └── package.json            # Root workspace configuration
 ```
 
-## Getting Started
+## Quick Start
 
-### Prerequisites
-- Node.js 18+ 
-- PostgreSQL 14+
-- Redis 6+
+### Using Docker (Recommended)
 
-### Installation
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd text-racing-mmo
+   ```
 
-1. Install all dependencies:
+2. Start the application:
+   ```bash
+   npm run deploy:dev
+   ```
+
+3. Open your browser to `http://localhost:3000`
+
+### Manual Setup
+
+1. Install dependencies:
+   ```bash
+   npm run install:all
+   ```
+
+2. Set up the database:
+   ```bash
+   npm run setup:db
+   ```
+
+3. Build the application:
+   ```bash
+   npm run build:all
+   ```
+
+4. Start the server:
+   ```bash
+   npm start
+   ```
+
+## Game Flow
+
+1. **Register/Login**: Create an account or log in
+2. **Select Car**: Choose from available car models with real specifications
+3. **Join/Create Race**: Start a new race or join an existing one
+4. **Race**: Use text commands to control your car during the race
+5. **View Results**: Check race results and league standings
+
+## Racing Commands
+
+- `accelerate` - Apply throttle to increase speed
+- `brake` - Apply brakes to slow down
+- `coast` - Let the car coast without throttle or brakes
+- `pit` - Enter the pit lane for tire changes and refueling
+
+### Development Commands
+
 ```bash
+# Install all dependencies
 npm run install:all
-```
 
-2. Set up environment variables (create .env files in backend/)
+# Start development servers
+npm run dev:backend    # Backend server
+npm run dev:frontend   # Frontend dev server
 
-3. Run database migrations (to be implemented)
-
-4. Start development servers:
-```bash
-# Backend (in one terminal)
-npm run dev:backend
-
-# Frontend (in another terminal)  
-npm run dev:frontend
-```
-
-### Testing
-
-Run all tests:
-```bash
+# Run tests
 npm run test:all
+
+# Database management
+npm run setup:db       # Initialize database
+npm run reset:db       # Reset database
+
+# Docker commands
+npm run docker:build   # Build Docker image
+npm run docker:run     # Start with Docker Compose
+npm run docker:stop    # Stop Docker containers
 ```
 
 ## Architecture
@@ -82,6 +137,32 @@ npm run test:all
 - Persistent league standings and race history
 - WebSocket-based real-time communication
 
-## Development Status
+## Deployment
 
-This project is currently in development. See `.kiro/specs/text-racing-mmo/tasks.md` for the implementation roadmap.
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment instructions including:
+- Docker Compose setup
+- Environment configuration
+- Production deployment
+- Scaling considerations
+- Security best practices
+
+## Technology Stack
+
+- **Frontend**: Vue.js 3, TypeScript, Pinia
+- **Backend**: Node.js, Express, TypeScript
+- **Database**: PostgreSQL
+- **Cache**: Redis
+- **Real-time**: Socket.IO
+- **Deployment**: Docker, Docker Compose
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## License
+
+MIT License - see LICENSE file for details

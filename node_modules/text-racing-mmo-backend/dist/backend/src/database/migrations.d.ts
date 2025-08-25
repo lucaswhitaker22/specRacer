@@ -5,7 +5,7 @@ export interface Migration {
     timestamp: Date;
 }
 declare class MigrationManager {
-    private db;
+    private get db();
     initializeMigrationsTable(): Promise<void>;
     getExecutedMigrations(): Promise<string[]>;
     markMigrationExecuted(migrationId: string, name: string): Promise<void>;

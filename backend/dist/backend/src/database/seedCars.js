@@ -44,7 +44,15 @@ async function seedCarData() {
     try {
         CarService_1.CarService.initialize();
         const cars = CarService_1.CarService.getAvailableCars();
-        const db = (0, connection_1.getDatabaseConnection)();
+        let db;
+        try {
+            db = (0, connection_1.getDatabaseConnection)();
+        }
+        catch {
+            const config = (0, connection_1.getDatabaseConfigFromEnv)();
+            db = (0, connection_1.createDatabaseConnection)(config);
+            await db.initialize();
+        }
         console.log(`Inserting ${cars.length} car models...`);
         for (const car of cars) {
             const query = `
